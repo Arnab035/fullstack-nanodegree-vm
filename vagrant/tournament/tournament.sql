@@ -8,33 +8,41 @@
 
 --Players table
 
-drop table if exists players;
+DROP DATABASE IF EXISTS tournament;
 
-create table players(
-	player_id serial primary key,
-    player_name text
+CREATE DATABASE tournament;
+
+\c tournament;
+
+
+DROP TABLE if exists players;
+
+CREATE TABLE players(
+	player_id serial PRIMARY KEY,
+    player_name text NOT NULL
  );
 
 --matches table
 
-drop table if exists matches;
+DROP TABLE if exists matches;
 
-create table matches(
-	match_id serial primary key,
-	player_winner integer references players(player_id),
-	player_loser integer references players(player_id),
-	UNIQUE (player_winner, player_loser)                       --to avoid matches between the same set of players
+CREATE TABLE matches(
+	match_id serial PRIMARY KEY ,
+	player_winner integer REFERENCES players(player_id ) ON DELETE CASCADE,
+	player_loser integer REFERENCES players(player_id) ON DELETE CASCADE,
+	UNIQUE (player_winner, player_loser),                       --to avoid matches between the same set of players
+	CHECK(player_winner <> player_loser)
 );
 
-create view player_standings as
-	select c.id as player_id, p.player_name, c.x as wins, (select count(*)/2 from matches) as matches
-	from players p join (select p.player_id as id, count(m.player_winner) as x
-		from players p left join matches m
-		on p.player_id = m.player_winner
-		group by p.player_id
-		order by x desc) c
-	on p.player_id = c.id
-	order by x desc;
+CREATE VIEW player_standings AS
+	SELECT c.id AS player_id, p.player_name, c.x AS wins, (SELECT count(*)/2 FROM matches) AS matches
+	FROM players p join (SELECT p.player_id as id, count(m.player_winner) AS x
+		FROM players p LEFT JOIN matches m
+		ON p.player_id = m.player_winner
+		GROUP BY p.player_id
+		ORDER BY x DESC) c
+	ON p.player_id = c.id
+	ORDER BY x DESC;
 
 
 
