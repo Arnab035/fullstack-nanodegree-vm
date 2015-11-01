@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# 
+#
 # tournament.py -- implementation of a Swiss-system tournament
 #
 
@@ -13,14 +13,40 @@ def connect():
 
 def deleteMatches():
     """Remove all the match records from the database."""
+    db = connect()
+    c = db.cursor()
+
+    # deletes all the matches from the table
+    c.execute("delete from matches")
+    db.commit()
+    db.close()
 
 
 def deletePlayers():
     """Remove all the player records from the database."""
+    db = connect()
+    c = db.cursor()
+    # deletes all the players from the table
+    c.execute("delete from players")
+    db.commit()
+    db.close()
 
 
 def countPlayers():
     """Returns the number of players currently registered."""
+    db = connect()
+    c = db.cursor()
+
+    # this query returns the number of players registered
+    query = "select count(*) from players"
+    c.execute(query)
+    value = c.fetchone()
+
+    # value is  returned as a tuple but we want only the
+    # value of the number of players
+    # hence we select only the first element of the tuple
+    db.close()
+    return value[0]
 
 
 def registerPlayer(name):
@@ -32,13 +58,20 @@ def registerPlayer(name):
     Args:
       name: the player's full name (need not be unique).
     """
+    db = connect()
+    c = db.cursor()
+
+    # registering a player for the tournament 
+    c.execute("insert into players(player_name) values (%s)", (name, ))
+    db.commit()
+    db.close()
 
 
 def playerStandings():
     """Returns a list of the players and their win records, sorted by wins.
 
-    The first entry in the list should be the player in first place, or a player
-    tied for first place if there is currently a tie.
+    The first entry in the list should be the player in first place, or a
+    player tied for first place if there is currently a tie.
 
     Returns:
       A list of tuples, each of which contains (id, name, wins, matches):
@@ -47,6 +80,16 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
+    db = connect()
+    c = db.cursor()
+    # player_standings is a view which has sorted
+    # the list of players as per the number of matches they won
+    # in descending order
+    query = "select * from player_standings"
+    c.execute(query)
+    rows = c.fetchall()
+    db.close()
+    return rows
 
 
 def reportMatch(winner, loser):
@@ -56,6 +99,13 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
+    db = connect()
+    c = db.cursor()
+    # insertion of winner and the loser for a particular match 
+    c.execute("insert into matches(player_winner,player_loser) values (%s,%s)",
+              (winner, loser, ))
+    db.commit()
+    db.close()
  
  
 def swissPairings():
@@ -73,5 +123,27 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
+    # playerStandings fetches the current player standings based on a view
+    # player_standings 
+    standings = playerStandings()
+
+    # count contains the number of players
+    count = len(standings)
+    i = 0
+    
+    # pairs is a list of tuples that will contain the swiss-system pairs 
+    pairs = []
+    
+    while (i < count):
+        
+        # the swiss-system pairs are based on selecting adjacent players
+        # from the list of player standings
+        row = standings[i]
+        next_row = standings[i+1]
+        pairs.append((row[0], row[1], next_row[0], next_row[1])) 
+
+        # iterate over two elements
+        i = i + 2
+    return pairs
 
 
